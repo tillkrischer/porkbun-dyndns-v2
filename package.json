@@ -1,0 +1,16 @@
+{
+  "name": "porkbun-dyndns-v2",
+  "version": "1.0.0",
+  "description": "A Bun-based dynamic DNS updater that runs every 5 minutes",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun --watch src/index.ts"
+  },
+  "dependencies": {
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
