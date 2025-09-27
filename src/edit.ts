@@ -22,9 +22,9 @@ type EditResponse = z.infer<typeof editResponseSchema>;
 export async function editDnsRecord(
     domain: string,
     recordId: string,
+    type: 'A' | 'MX' | 'CNAME' | 'ALIAS' | 'TXT' | 'NS' | 'AAAA' | 'SRV' | 'TLSA' | 'CAA' | 'HTTPS' | 'SVCB',
+    content: string,
     name?: string,
-    type?: 'A' | 'MX' | 'CNAME' | 'ALIAS' | 'TXT' | 'NS' | 'AAAA' | 'SRV' | 'TLSA' | 'CAA' | 'HTTPS' | 'SVCB',
-    content?: string,
     ttl?: string,
     prio?: string,
     notes?: string | null

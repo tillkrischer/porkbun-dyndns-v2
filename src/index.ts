@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 
+import { editDnsRecord } from './edit';
 import { config } from './config';
 import { ping } from './ping';
 import { DnsRecord, retrieveByNameType } from './retrieveByNameType';
@@ -33,7 +34,7 @@ async function main() {
 
     if (currentARecord.content !== currentIp) {
       console.log(`[${new Date().toISOString()}] IP address has changed. Updating DNS...`);
-      await editDnsRecord(config.DOMAIN, currentARecord.id, undefined, undefined, currentIp);
+      await editDnsRecord(config.DOMAIN, currentARecord.id, 'A', currentIp);
     } else {
       console.log(`[${new Date().toISOString()}] IP address has not changed.`);
     }
