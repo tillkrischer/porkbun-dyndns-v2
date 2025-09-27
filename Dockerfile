@@ -11,7 +11,7 @@ RUN cd /temp/dev && bun install --frozen-lockfile
 
 # Install with --production (exclude devDependencies)
 RUN mkdir -p /temp/prod
-COPY package.json bun.lockb /temp/prod/
+COPY package.json bun.lock /temp/prod/
 RUN cd /temp/prod && bun install --frozen-lockfile --production
 
 # Copy node_modules from temp directory
