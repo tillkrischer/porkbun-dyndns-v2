@@ -2,41 +2,64 @@
 
 import { editDnsRecord } from './edit';
 import { config } from './config';
-import { ping } from './ping';
+import { getPublicIpv4, getPublicIpv6 } from './ip';
 import { DnsRecord, retrieveByNameType } from './retrieveByNameType';
 
 
 console.log(`[${new Date().toISOString()}] Starting porkbun-dyndns-v2...`);
 console.log(`[${new Date().toISOString()}] Domain: ${config.DOMAIN}`);
 
-async function getPublicIp(): Promise<string> {
-    const pingResponse = await ping();
-    return pingResponse.yourIp;
+type ManagedRecordType = 'A' | 'AAAA';
+
+async function getCurrentRecord(type: ManagedRecordType): Promise<DnsRecord | null> {
+    const recordsResponse = await retrieveByNameType(config.DOMAIN, type);
+
+    if (recordsResponse.records.length === 0) {
+        return null;
+    }
+
+    return recordsResponse.records[0];
 }
 
-async function getCurrentARecord(): Promise<DnsRecord> {
-    const recordsResponse = await retrieveByNameType(config.DOMAIN, 'A');
-    if (recordsResponse.records.length === 0) {
-        throw new Error(`No A records found for domain ${config.DOMAIN}`);
+async function syncRecord(type: ManagedRecordType, nextIp: string, required = false) {
+  const currentRecord = await getCurrentRecord(type);
+
+  if (!currentRecord) {
+    if (required) {
+      throw new Error(`No ${type} records found for domain ${config.DOMAIN}`);
     }
-    return recordsResponse.records[0];
+
+    console.log(`[${new Date().toISOString()}] No ${type} record found for domain ${config.DOMAIN}. Skipping.`);
+    return;
+  }
+
+  console.log(`[${new Date().toISOString()}] Current ${type} record: ${currentRecord.content}`);
+
+  if (currentRecord.content !== nextIp) {
+    console.log(`[${new Date().toISOString()}] ${type} address has changed. Updating DNS...`);
+    await editDnsRecord(config.DOMAIN, currentRecord.id, type, nextIp);
+    console.log(`[${new Date().toISOString()}] Updated ${type} record to ${nextIp}`);
+    return;
+  }
+
+  console.log(`[${new Date().toISOString()}] ${type} address has not changed.`);
 }
 
 async function main() {
   console.log(`[${new Date().toISOString()}] Running DNS update check...`);
   
   try {
-    const currentIp = await getPublicIp();
-    console.log(`[${new Date().toISOString()}] Current public IP: ${currentIp}`);
-    
-    const currentARecord = await getCurrentARecord();
-    console.log(`[${new Date().toISOString()}] Current A record: ${currentARecord.content}`);
+    const currentIpv4 = await getPublicIpv4();
+    console.log(`[${new Date().toISOString()}] Detected public IPv4: ${currentIpv4}`);
 
-    if (currentARecord.content !== currentIp) {
-      console.log(`[${new Date().toISOString()}] IP address has changed. Updating DNS...`);
-      await editDnsRecord(config.DOMAIN, currentARecord.id, 'A', currentIp);
+    await syncRecord('A', currentIpv4, true);
+
+    const currentIpv6 = await getPublicIpv6();
+    if (!currentIpv6) {
+      console.log(`[${new Date().toISOString()}] No public IPv6 detected via Porkbun. Skipping AAAA update.`);
     } else {
-      console.log(`[${new Date().toISOString()}] IP address has not changed.`);
+      console.log(`[${new Date().toISOString()}] Detected public IPv6: ${currentIpv6}`);
+      await syncRecord('AAAA', currentIpv6);
     }
 
     console.log(`[${new Date().toISOString()}] DNS update check completed`);

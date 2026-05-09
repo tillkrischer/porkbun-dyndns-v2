@@ -5,6 +5,7 @@ A Bun-based dynamic DNS updater that runs every 5 minutes in a Docker container.
 ## Features
 
 - Runs every 5 minutes automatically
+- Updates both `A` and `AAAA` records when matching DNS records already exist
 - Built with Bun for fast performance
 - Containerized with Docker
 - Lightweight and efficient
@@ -58,10 +59,23 @@ docker rm porkbun-dyndns
 
 ## Configuration
 
-Add your dynamic DNS logic in `index.ts`. The script will:
-1. Run immediately when started
-2. Then run every 5 minutes continuously
-3. Log timestamps for each execution
+Create a `.env` file with:
+
+```env
+DOMAIN=example.com
+APIKEY=pk1_xxxxxxxxxxxxxxxxx
+SECRETAPIKEY=sk1_xxxxxxxxxxxxxxxxx
+```
+
+The updater will:
+1. Detect IPv4 from `https://api-ipv4.porkbun.com/api/json/v3/ip`
+2. Detect IPv6 from `https://api.porkbun.com/api/json/v3/ip`
+3. Update the existing `A` record when the public IPv4 changes
+4. Update the existing `AAAA` record when the public IPv6 changes
+5. Skip `AAAA` updates when Porkbun does not return an IPv6 address
+6. Skip missing `AAAA` records instead of creating them automatically
+
+If you run this in Docker and want automatic IPv6 detection, the container itself must reach Porkbun over IPv6. In the current deployment, this is achieved with `network_mode: host`.
 
 ## Project Structure
 
