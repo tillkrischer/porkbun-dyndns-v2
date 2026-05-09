@@ -4,6 +4,7 @@ const envSchema = z.object({
   DOMAIN: z.string().min(1, "DOMAIN is required"),
   APIKEY: z.string().min(1, "APIKEY is required"),
   SECRETAPIKEY: z.string().min(1, "SECRETAPIKEY is required"),
+  LOG_LEVEL: z.enum(['error', 'info', 'debug']).default('info'),
 });
 
 

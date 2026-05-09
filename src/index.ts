@@ -5,11 +5,32 @@ import { config } from './config';
 import { getPublicIpv4, getPublicIpv6 } from './ip';
 import { DnsRecord, retrieveByNameType } from './retrieveByNameType';
 
-
-console.log(`[${new Date().toISOString()}] Starting porkbun-dyndns-v2...`);
-console.log(`[${new Date().toISOString()}] Domain: ${config.DOMAIN}`);
-
+type LogLevel = 'error' | 'info' | 'debug';
 type ManagedRecordType = 'A' | 'AAAA';
+
+const logLevels: Record<LogLevel, number> = {
+  error: 0,
+  info: 1,
+  debug: 2,
+};
+
+function log(level: LogLevel, message: string, ...args: unknown[]) {
+  if (logLevels[level] > logLevels[config.LOG_LEVEL]) {
+    return;
+  }
+
+  const output = `[${new Date().toISOString()}] ${message}`;
+
+  if (level === 'error') {
+    console.error(output, ...args);
+    return;
+  }
+
+  console.log(output, ...args);
+}
+
+log('info', 'Starting porkbun-dyndns-v2...');
+log('info', `Domain: ${config.DOMAIN}`);
 
 async function getCurrentRecord(type: ManagedRecordType): Promise<DnsRecord | null> {
     const recordsResponse = await retrieveByNameType(config.DOMAIN, type);
@@ -29,49 +50,49 @@ async function syncRecord(type: ManagedRecordType, nextIp: string, required = fa
       throw new Error(`No ${type} records found for domain ${config.DOMAIN}`);
     }
 
-    console.log(`[${new Date().toISOString()}] No ${type} record found for domain ${config.DOMAIN}. Skipping.`);
+    log('info', `No ${type} record found for domain ${config.DOMAIN}. Skipping.`);
     return;
   }
 
-  console.log(`[${new Date().toISOString()}] Current ${type} record: ${currentRecord.content}`);
+  log('debug', `Current ${type} record: ${currentRecord.content}`);
 
   if (currentRecord.content !== nextIp) {
-    console.log(`[${new Date().toISOString()}] ${type} address has changed. Updating DNS...`);
+    log('info', `${type} address has changed. Updating DNS...`);
     await editDnsRecord(config.DOMAIN, currentRecord.id, type, nextIp);
-    console.log(`[${new Date().toISOString()}] Updated ${type} record to ${nextIp}`);
+    log('info', `Updated ${type} record to ${nextIp}`);
     return;
   }
 
-  console.log(`[${new Date().toISOString()}] ${type} address has not changed.`);
+  log('debug', `${type} address has not changed.`);
 }
 
 async function main() {
-  console.log(`[${new Date().toISOString()}] Running DNS update check...`);
+  log('debug', 'Running DNS update check...');
   
   try {
     const currentIpv4 = await getPublicIpv4();
-    console.log(`[${new Date().toISOString()}] Detected public IPv4: ${currentIpv4}`);
+    log('debug', `Detected public IPv4: ${currentIpv4}`);
 
     await syncRecord('A', currentIpv4, true);
 
     const currentIpv6 = await getPublicIpv6();
     if (!currentIpv6) {
-      console.log(`[${new Date().toISOString()}] No public IPv6 detected via Porkbun. Skipping AAAA update.`);
+      log('info', 'No public IPv6 detected via Porkbun. Skipping AAAA update.');
     } else {
-      console.log(`[${new Date().toISOString()}] Detected public IPv6: ${currentIpv6}`);
+      log('debug', `Detected public IPv6: ${currentIpv6}`);
       await syncRecord('AAAA', currentIpv6);
     }
 
-    console.log(`[${new Date().toISOString()}] DNS update check completed`);
+    log('debug', 'DNS update check completed');
   } catch (error) {
-    console.error(`[${new Date().toISOString()}] Error during DNS update check:`, error);
+    log('error', 'Error during DNS update check:', error);
   }
 }
 
-main().catch(console.error);
+main().catch((error) => log('error', 'Unhandled error during startup:', error));
 
 setInterval(() => {
-  main().catch(console.error);
+  main().catch((error) => log('error', 'Unhandled error during scheduled run:', error));
 }, 5 * 60 * 1000);
 
-console.log(`[${new Date().toISOString()}] Scheduler started. Will run every 5 minutes...`);
+log('info', 'Scheduler started. Will run every 5 minutes...');

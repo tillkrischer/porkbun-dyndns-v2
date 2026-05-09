@@ -65,7 +65,10 @@ Create a `.env` file with:
 DOMAIN=example.com
 APIKEY=pk1_xxxxxxxxxxxxxxxxx
 SECRETAPIKEY=sk1_xxxxxxxxxxxxxxxxx
+LOG_LEVEL=info
 ```
+
+`LOG_LEVEL` is optional and defaults to `info`. Set it to `debug` to see every scheduled check, unchanged-record messages, and detected IP addresses.
 
 The updater will:
 1. Detect IPv4 from `https://api-ipv4.porkbun.com/api/json/v3/ip`
